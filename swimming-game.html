@@ -423,6 +423,9 @@
         let lastTimeUpdate = 0;
         let gameStartTime = 0;
         let animationFrameId = null;
+        let lastFrameTime = 0;
+        // 기준 프레임시간 (60fps = 약 16.67ms)
+        const TARGET_FRAME_TIME = 1000 / 60;
 
         // 점수 달성 시간 추적 (동점 시 사용)
         let score1Times = []; // 각 점수 달성 시의 시간
@@ -651,15 +654,16 @@
                 ctx.fillText(this.name === 'Player 1' ? 'P1' : 'P2', this.x, this.y + 30);
             }
 
-            update(moveX, moveY, sprint) {
+            update(moveX, moveY, sprint, deltaTime = 1) {
                 this.isSprinting = sprint && this.stamina > 0;
                 const currentSpeed = this.isSprinting ? this.sprintSpeed : this.speed;
 
                 if (moveX !== 0 || moveY !== 0) {
                     const distance = Math.sqrt(moveX * moveX + moveY * moveY);
-                    this.x += (moveX / distance) * currentSpeed;
-                    this.y += (moveY / distance) * currentSpeed;
-                    this.swimAnimation += 0.15;
+                    // deltaTime 기반으로 속도 조정
+                    this.x += (moveX / distance) * currentSpeed * deltaTime;
+                    this.y += (moveY / distance) * currentSpeed * deltaTime;
+                    this.swimAnimation += 0.15 * deltaTime;
 
                     // 이동 방향으로 각도 업데이트
                     this.targetAngle = Math.atan2(moveY, moveX) + Math.PI / 2;
@@ -668,17 +672,17 @@
                     let angleDiff = this.targetAngle - this.angle;
                     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                    this.angle += angleDiff * 0.15;
+                    this.angle += angleDiff * 0.15 * deltaTime;
 
                     this.x = Math.max(this.width, Math.min(canvas.width - this.width, this.x));
                     this.y = Math.max(this.height, Math.min(canvas.height - this.height, this.y));
                 }
 
                 if (this.isSprinting) {
-                    this.stamina -= this.staminaDrain;
+                    this.stamina -= this.staminaDrain * deltaTime;
                     if (this.stamina < 0) this.stamina = 0;
                 } else {
-                    this.stamina += this.staminaRegen;
+                    this.stamina += this.staminaRegen * deltaTime;
                     if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
                 }
 
@@ -686,7 +690,7 @@
                     this.trail.push({ x: this.x, y: this.y + 10, alpha: 0.4 });
                 }
                 for (let i = this.trail.length - 1; i >= 0; i--) {
-                    this.trail[i].alpha -= 0.015;
+                    this.trail[i].alpha -= 0.015 * deltaTime;
                     if (this.trail[i].alpha <= 0) {
                         this.trail.splice(i, 1);
                     }
@@ -1086,11 +1090,17 @@
         }
 
         // 게임 루프
-        function gameLoop() {
+        function gameLoop(timestamp) {
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
             }
             
+            // deltaTime 계산 (60fps 기준으로 정규화)
+            if (lastFrameTime === 0) lastFrameTime = timestamp;
+            const elapsed = timestamp - lastFrameTime;
+            lastFrameTime = timestamp;
+            const deltaTime = elapsed / TARGET_FRAME_TIME; // 1.0 = 60fps 기준
+
             drawBackground();
             waterParticles.forEach(p => {
                 p.update();
@@ -1132,7 +1142,7 @@
             if (p1Down) moveY1 += 1;
             if (p1Left) moveX1 -= 1;
             if (p1Right) moveX1 += 1;
-            player1.update(moveX1, moveY1, p1Sprint);
+            player1.update(moveX1, moveY1, p1Sprint, deltaTime);
 
             // 플레이어 2 이동
             let moveX2 = 0, moveY2 = 0;
@@ -1145,7 +1155,7 @@
             if (p2Down) moveY2 += 1;
             if (p2Left) moveX2 -= 1;
             if (p2Right) moveX2 += 1;
-            player2.update(moveX2, moveY2, p2Sprint);
+            player2.update(moveX2, moveY2, p2Sprint, deltaTime);
 
             // 키 상태 표시
             document.getElementById('p1KeyDisplay').textContent = 

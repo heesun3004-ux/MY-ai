@@ -656,16 +656,17 @@
                 ctx.fillText(this.name === 'Player 1' ? 'P1' : 'P2', this.x, this.y + 30);
             }
 
-            update(moveX, moveY, sprint, deltaTime = 1) {
+            update(moveX, moveY, sprint) {
+                // 스프린트 활성화 여부 (키가 눌려있고 체력이 남아있을 때)
                 this.isSprinting = sprint && this.stamina > 0;
                 const currentSpeed = this.isSprinting ? this.sprintSpeed : this.speed;
 
+                // 이동 처리
                 if (moveX !== 0 || moveY !== 0) {
                     const distance = Math.sqrt(moveX * moveX + moveY * moveY);
-                    // deltaTime 기반으로 속도 조정
-                    this.x += (moveX / distance) * currentSpeed * deltaTime;
-                    this.y += (moveY / distance) * currentSpeed * deltaTime;
-                    this.swimAnimation += 0.15 * deltaTime;
+                    this.x += (moveX / distance) * currentSpeed;
+                    this.y += (moveY / distance) * currentSpeed;
+                    this.swimAnimation += 0.15;
 
                     // 이동 방향으로 각도 업데이트
                     this.targetAngle = Math.atan2(moveY, moveX) + Math.PI / 2;
@@ -674,25 +675,29 @@
                     let angleDiff = this.targetAngle - this.angle;
                     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                    this.angle += angleDiff * 0.15 * deltaTime;
+                    this.angle += angleDiff * 0.15;
 
                     this.x = Math.max(this.width, Math.min(canvas.width - this.width, this.x));
                     this.y = Math.max(this.height, Math.min(canvas.height - this.height, this.y));
                 }
 
+                // 체력(스태미나) 관리 - 이동 여부와 상관없이 항상 실행
                 if (this.isSprinting) {
-                    this.stamina -= this.staminaDrain * deltaTime;
+                    // 스프린트 중: 체력 감소
+                    this.stamina -= this.staminaDrain;
                     if (this.stamina < 0) this.stamina = 0;
                 } else {
-                    this.stamina += this.staminaRegen * deltaTime;
+                    // 일반 상태: 체력 회복
+                    this.stamina += this.staminaRegen;
                     if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
                 }
 
+                // 이동 흔적
                 if (moveX !== 0 || moveY !== 0) {
                     this.trail.push({ x: this.x, y: this.y + 10, alpha: 0.4 });
                 }
                 for (let i = this.trail.length - 1; i >= 0; i--) {
-                    this.trail[i].alpha -= 0.015 * deltaTime;
+                    this.trail[i].alpha -= 0.015;
                     if (this.trail[i].alpha <= 0) {
                         this.trail.splice(i, 1);
                     }

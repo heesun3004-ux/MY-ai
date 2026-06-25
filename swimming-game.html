@@ -994,6 +994,7 @@
             timeLeft = GAME_TIME;
             gameStartTime = Date.now();
             lastTimeUpdate = Date.now();
+            lastFrameTime = 0;
             gameRunning = true;
             rescueEffect = null;
             
@@ -1099,7 +1100,8 @@
             if (lastFrameTime === 0) lastFrameTime = timestamp;
             const elapsed = timestamp - lastFrameTime;
             lastFrameTime = timestamp;
-            const deltaTime = elapsed / TARGET_FRAME_TIME; // 1.0 = 60fps 기준
+            // deltaTime을 1.0~2.0 범위로 제한 (너무 크거나 작으면 보정)
+            const deltaTime = Math.min(Math.max(elapsed / TARGET_FRAME_TIME, 0.5), 2.0);
 
             drawBackground();
             waterParticles.forEach(p => {

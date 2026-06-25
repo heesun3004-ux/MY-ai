@@ -425,6 +425,7 @@
         let animationFrameId = null;
         let lastFrameTime = 0;
         let gameLoopStarted = false;
+        let waitingScreenFrameId = null; // 대기 화면용 별도 프레임 ID
         // 기준 프레임시간 (60fps = 약 16.67ms)
         const TARGET_FRAME_TIME = 1000 / 60;
 
@@ -457,7 +458,7 @@
                 this.sprintSpeed = 5.5;
                 this.stamina = 100;
                 this.maxStamina = 100;
-                this.staminaRegen = 0.4;
+                this.staminaRegen = 0.8; // 체력 회복 속도 증가
                 this.staminaDrain = 0.9;
                 this.isSprinting = false;
                 this.swimAnimation = 0;
@@ -962,6 +963,14 @@
                 cancelAnimationFrame(animationFrameId);
                 animationFrameId = null;
             }
+            if (waitingScreenFrameId) {
+                cancelAnimationFrame(waitingScreenFrameId);
+                waitingScreenFrameId = null;
+            }
+            
+            // 게임 시작 시 타임스탬프도 초기화
+            lastFrameTime = 0;
+            gameLoopStarted = false;
             
             player1.reset(120, canvas.height / 2);
             player2.reset(canvas.width - 120, canvas.height / 2);
@@ -1099,15 +1108,17 @@
             }
             
             // deltaTime 계산 (60fps 기준으로 정규화)
-            // 첫 프레임은 deltaTime을 1.0으로 고정 (비정상 값 방지)
-            if (!gameLoopStarted) {
-                lastFrameTime = timestamp;
-                gameLoopStarted = true;
+            let deltaTime = 1.0;
+            
+            // 두 번째 프레임부터 deltaTime 계산
+            if (lastFrameTime > 0) {
+                const elapsed = timestamp - lastFrameTime;
+                // deltaTime을 0.5~2.0 범위로 제한 (너무 크거나 작으면 보정)
+                deltaTime = Math.min(Math.max(elapsed / TARGET_FRAME_TIME, 0.5), 2.0);
             }
-            const elapsed = timestamp - lastFrameTime;
+            
+            // 첫 프레임을 기준으로 저장
             lastFrameTime = timestamp;
-            // deltaTime을 0.5~2.0 범위로 제한 (너무 크거나 작으면 보정)
-            const deltaTime = Math.min(Math.max(elapsed / TARGET_FRAME_TIME, 0.5), 2.0);
 
             drawBackground();
             waterParticles.forEach(p => {
@@ -1386,7 +1397,7 @@
             ctx.textAlign = 'center';
             ctx.fillText('게임 시작 버튼을 누르세요!', canvas.width / 2, canvas.height / 2);
             
-            requestAnimationFrame(drawWaitingScreen);
+            waitingScreenFrameId = requestAnimationFrame(drawWaitingScreen);
         }
         
         drawWaitingScreen();

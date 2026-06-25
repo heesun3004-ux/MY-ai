@@ -424,6 +424,7 @@
         let gameStartTime = 0;
         let animationFrameId = null;
         let lastFrameTime = 0;
+        let gameLoopStarted = false;
         // 기준 프레임시간 (60fps = 약 16.67ms)
         const TARGET_FRAME_TIME = 1000 / 60;
 
@@ -995,6 +996,7 @@
             gameStartTime = Date.now();
             lastTimeUpdate = Date.now();
             lastFrameTime = 0;
+            gameLoopStarted = false;
             gameRunning = true;
             rescueEffect = null;
             
@@ -1097,10 +1099,14 @@
             }
             
             // deltaTime 계산 (60fps 기준으로 정규화)
-            if (lastFrameTime === 0) lastFrameTime = timestamp;
+            // 첫 프레임은 deltaTime을 1.0으로 고정 (비정상 값 방지)
+            if (!gameLoopStarted) {
+                lastFrameTime = timestamp;
+                gameLoopStarted = true;
+            }
             const elapsed = timestamp - lastFrameTime;
             lastFrameTime = timestamp;
-            // deltaTime을 1.0~2.0 범위로 제한 (너무 크거나 작으면 보정)
+            // deltaTime을 0.5~2.0 범위로 제한 (너무 크거나 작으면 보정)
             const deltaTime = Math.min(Math.max(elapsed / TARGET_FRAME_TIME, 0.5), 2.0);
 
             drawBackground();
